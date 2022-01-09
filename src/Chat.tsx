@@ -7,10 +7,9 @@ type Messages = {
 	send_at: string
 }
 const socket = io("http://localhost:4000")
-const socket_id: string[] = []
-
+let socket_id: string = ""
 socket.on("connect", (): void => {
-	socket_id.push(socket.id)
+	socket_id = socket.id
 	console.log(`Running with socket: ${socket_id[0]} `)
 })
 
@@ -30,7 +29,7 @@ export const Chat = () => {
 		if (!sendMessage.trim()) return
 
 		socket.emit("send.message", {
-			id: socket_id[0],
+			id: socket_id,
 			content: sendMessage,
 			send_at: Date(),
 		})
@@ -39,23 +38,24 @@ export const Chat = () => {
 	}
 
 	return (
-		<main>
-			<ul>
-				{messages.map((value, i) => {
-					;<li
-						key={i}
-						className={`list__item list__item--${
-							value.id === socket_id[0] ? "mine" : "other"
-						}`}></li>
-				})}
-			</ul>
-			<div>
+		<main className="container">
+			<div className="msg">
+				<ul className="ul-list">
+					{messages.map((value, i) => (
+						<li key={i} className={`li li-${value.id === socket_id ? "mine" : "other"}`}>
+							<span className={`message message--${value.id === socket_id ? "mine" : "other"}`}>
+								{`${value.content}  - ${value.send_at.slice(16, 21)} `}
+							</span>
+						</li>
+					))}
+				</ul>
+
 				<form className="sendMsgForm" onSubmit={handleMsgSubimit}>
 					<input
 						type="text"
 						value={sendMessage}
 						placeholder="Entry your message"
-						className="form.input"
+						className="form-input"
 						onChange={(e) => setsendMessage(e.target.value)}
 					/>
 					<button type="submit">Send message</button>
