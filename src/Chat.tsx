@@ -1,5 +1,6 @@
-import React, { useState, useEffect, FormEvent } from "react"
-import { io, Socket } from "socket.io-client"
+import React, { useState, useEffect, FormEvent, useRef } from "react"
+import { io } from "socket.io-client"
+import SocketIOFileClient from "socket.io-file-client"
 
 type Messages = {
 	id: string
@@ -7,20 +8,45 @@ type Messages = {
 	send_at: string
 }
 const socket = io("http://localhost:4000")
-let socket_id: string = ""
-socket.on("connect", (): void => {
-	socket_id = socket.id
-	console.log(`Running with socket: ${socket_id[0]} `)
+const uploader = new SocketIOFileClient(socket)
+
+uploader.on("start", function (fileInfo: any) {
+	console.log("Start uploading", fileInfo)
+})
+uploader.on("stream", function (fileInfo: any) {
+	console.log("Streaming... sent " + fileInfo.sent + " bytes.")
+})
+uploader.on("complete", function (fileInfo: any) {
+	console.log("Upload Complete", fileInfo)
+})
+uploader.on("error", function (err: any) {
+	console.log("Error!", err)
+})
+uploader.on("abort", function (fileInfo: any) {
+	console.log("Aborted: ", fileInfo)
 })
 
 export const Chat = () => {
 	const [sendMessage, setsendMessage] = useState<string>("")
 	const [messages, setMessages] = useState<Messages[]>([])
+	const [socketId, setSocketId] = useState<string>("")
+	const [file, setFile] = useState<any>(null)
+
+	// const socket = useRef()
+	const fileRef = useRef(null)
+
+	useEffect((): any => {
+		const connection = (): void => {
+			console.log(`Running with socket: ${socket.id} `)
+			return setSocketId(socket.id)
+		}
+		socket.on("connect", connection)
+		return () => socket.off("connect", connection)
+	}, [])
 
 	useEffect((): any => {
 		const listenMessage = (msgData: Messages) => setMessages([...messages, msgData])
 		socket.on("send.message", listenMessage)
-		console.log(messages[0])
 		return () => socket.off("send.message", listenMessage)
 	}, [messages])
 
@@ -29,12 +55,18 @@ export const Chat = () => {
 		if (!sendMessage.trim()) return
 
 		socket.emit("send.message", {
-			id: socket_id,
+			id: socketId,
 			content: sendMessage,
 			send_at: Date(),
 		})
 
 		setsendMessage("")
+	}
+	const handleFileSubmit = (e: FormEvent): void => {
+		e.preventDefault()
+		if (file) {
+			uploader.upload(file)
+		}
 	}
 
 	return (
@@ -42,8 +74,8 @@ export const Chat = () => {
 			<div className="msg">
 				<ul className="ul-list">
 					{messages.map((value, i) => (
-						<li key={i} className={`li li-${value.id === socket_id ? "mine" : "other"}`}>
-							<span className={`message message--${value.id === socket_id ? "mine" : "other"}`}>
+						<li key={i} className={`li li-${value.id === socketId ? "mine" : "other"}`}>
+							<span className={`message message--${value.id === socketId ? "mine" : "other"}`}>
 								{`${value.content}  - ${value.send_at.slice(16, 21)} `}
 							</span>
 						</li>
@@ -59,6 +91,10 @@ export const Chat = () => {
 						onChange={(e) => setsendMessage(e.target.value)}
 					/>
 					<button type="submit">Send message</button>
+				</form>
+				<form id="form" onSubmit={handleFileSubmit}>
+					<input type="file" ref={fileRef} id="file" onChange={(e) => setFile(e.target.files)} />
+					<input type="submit" value="Upload" />
 				</form>
 			</div>
 		</main>
