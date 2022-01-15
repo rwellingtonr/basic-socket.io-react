@@ -10,19 +10,19 @@ type Messages = {
 const socket = io("http://localhost:4000")
 const uploader = new SocketIOFileClient(socket)
 
-uploader.on("start", function (fileInfo: any) {
+uploader.on("start", (fileInfo: any) => {
 	console.log("Start uploading", fileInfo)
 })
-uploader.on("stream", function (fileInfo: any) {
+uploader.on("stream", (fileInfo: any) => {
 	console.log("Streaming... sent " + fileInfo.sent + " bytes.")
 })
-uploader.on("complete", function (fileInfo: any) {
+uploader.on("complete", (fileInfo: any) => {
 	console.log("Upload Complete", fileInfo)
 })
-uploader.on("error", function (err: any) {
+uploader.on("error", (err: string) => {
 	console.log("Error!", err)
 })
-uploader.on("abort", function (fileInfo: any) {
+uploader.on("abort", (fileInfo: any) => {
 	console.log("Aborted: ", fileInfo)
 })
 
@@ -30,10 +30,7 @@ export const Chat = () => {
 	const [sendMessage, setsendMessage] = useState<string>("")
 	const [messages, setMessages] = useState<Messages[]>([])
 	const [socketId, setSocketId] = useState<string>("")
-	const [file, setFile] = useState<any>(null)
-
-	// const socket = useRef()
-	const fileRef = useRef(null)
+	const [file, setFile] = useState<any>("")
 
 	useEffect((): any => {
 		const connection = (): void => {
@@ -66,6 +63,7 @@ export const Chat = () => {
 		e.preventDefault()
 		if (file) {
 			uploader.upload(file)
+			setFile("")
 		}
 	}
 
@@ -93,7 +91,7 @@ export const Chat = () => {
 					<button type="submit">Send message</button>
 				</form>
 				<form id="form" onSubmit={handleFileSubmit}>
-					<input type="file" ref={fileRef} id="file" onChange={(e) => setFile(e.target.files)} />
+					<input type="file" id="file" onChange={(e) => setFile(e.target.files)} />
 					<input type="submit" value="Upload" />
 				</form>
 			</div>
